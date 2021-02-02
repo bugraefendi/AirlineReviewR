@@ -1,0 +1,135 @@
+---
+title: "EDA_Airline_review"
+author: "Bugra Duman"
+date: "2/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+## R Markdown
+
+
+```{r Loading, include=FALSE}
+review <- readr::read_csv('skytrax.csv')
+library(tidyr)
+library(tidyverse)
+library(tidytext)
+library(tm)
+library(stringi)
+library(ggthemes)
+library(scorecard)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r  NA, echo=FALSE}
+#Cleaning NAs
+r<- review %>% na.omit()
+
+#Check if there is left
+row.has.na <- apply(r, 1, function(x){any(is.na(x))})
+
+sum(row.has.na)
+
+
+```
+
+We can start exploring our data
+```{r Glimpse}
+
+tibble::glimpse(r)
+
+```
+Dataset includes detailed score and overall score, besides score we also have detailes about trip such as aircraft and traveller type.Lets start with numbers than categorical values.
+
+
+
+
+```{r Score}
+r <- one_hot(r,var_encode = 'recommended')
+
+r_score <- r %>%
+  select(airline,overall,seat_comfort,cabin_service,food_bev,entertainment,ground_service,value_for_money)
+
+head(r_score)
+```
+
+
+```{r Most Reviewed}
+numberof_reviews_airline <- r_score %>%  group_by(airline) %>% count(airline) %>% dplyr::arrange(desc(n)) 
+  ggplot(numberof_reviews_airline[1:20,],aes(x=reorder(airline,-n), y=n)) + 
+    geom_bar(stat = "identity") +
+    coord_flip()+
+    ggtitle("Top 20 Most Reviewed Airlines")+
+    theme_fivethirtyeight()
+```
+
+Apperantly Cathay Pacific and British Airlines passengers are writing the most about the flight.
+
+
+
+```{r Overall scoring}
+overall_mean <- r_score %>%  
+  group_by(airline) %>% 
+  summarise(Overall_Mean=mean(overall)) %>% 
+  arrange(desc(Overall_Mean)) %>% head(20)
+
+
+ggplot(overall_mean,aes(x=reorder(airline,-(Overall_Mean)),y=Overall_Mean))+
+  geom_bar(width=.5,stat = "identity")+
+  coord_flip()
+
+to_do scale_y duzelt
+
+
+```
+
+Out of all airlines Aegean Airlines from Greece gets the highest points from passengers, one remarakle point over here is The Big 4 Middle East/Gulf airlines (Emirates, Etihad, Qatar, Turkish) are performing relativly low when we compare with others.Note(In our dataset there is no review for Etihad)
+
+
+
+
+
+```{r Cabin Scoring}
+cabin <- r_score %>%  group_by(airline) %>% 
+  transmute(Overall_cabin= seat_comfort + cabin_service + food_bev + entertainment)%>%
+  summarise(Overall_cabin_mean = mean(Overall_cabin)) %>%
+  arrange(desc(Overall_cabin_mean)) %>%  head(20)
+
+ggplot(cabin,aes(x=reorder(airline,-(Overall_cabin_mean)),y=Overall_cabin_mean))+
+  geom_bar(width=.5,stat = "identity")+
+  coord_flip()
+
+scale y duzenle
+
+```
+
+```{r Value for Money}
+
+value_money <- r_score %>%  
+  group_by(airline) %>% 
+  summarise(value_of_money=mean(value_for_money)) %>% 
+  arrange(desc(value_of_money)) %>% head(20)
+
+
+ggplot(value_money,aes(x=reorder(airline,-(value_of_money)),y=value_of_money))+
+  geom_bar(width=.5,stat = "identity")+
+  coord_flip()
+  
+
+to_do value ve over all ayni grafikte nasil gosteririm
+
+
+```
+
+
+```{r}
+
+
+```
