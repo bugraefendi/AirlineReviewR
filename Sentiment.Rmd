@@ -1,0 +1,182 @@
+---
+title: "Sentiment"
+author: "Bugra Duman"
+date: "2/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+```{r}
+library(pander)
+library(tidyr)
+library(tidytext)
+library(tm)
+library(stringi)
+```
+
+
+```{r Table}
+dt <- data.frame(r$airline,r$overall,r$cabin,r$traveller_type,r$customer_review,r$recommended_yes)
+pandoc.table(dt[2:4,1:2], justify = c('left', 'left', 'right'))
+```
+
+## Cleaning
+
+
+
+```{r Corpus and Cleaning, echo=FALSE}
+#Setting up source and corpus
+
+corpus <- VCorpus(VectorSource(r$customer_review))
+corpus[[123]]$content
+
+# Cleaning
+corpus<- tm_map(corpus,stripWhitespace)
+
+corpus <- tm_map(corpus,removePunctuation)
+
+corpus <- tm_map(corpus,content_transformer(tolower))
+
+corpus<- tm_map(corpus,removeWords,stopwords("english"))
+
+#since it is a flight review it has lots of time info lets remove
+corpus <- tm_map(corpus,removeNumbers)
+
+#last Whitespaceremove
+
+corpus<- tm_map(corpus,stripWhitespace)
+
+
+```
+
+
+```{r CustomClean}
+#Custom Cleaning 
+toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+
+
+#Since data scraped from website it has png next to comments below we have remove it
+corpus <- tm_map(corpus,toSpace, c("âœ… | Not Verified | âœ… verified | âœ… trip verified | Verified | trip verified | verified review | flight | airline | airlines"))
+
+
+corpus <- tm_map(corpus,stripWhitespace)
+
+
+corpus[[123]]$content
+```
+```{r Token}
+
+dt$r.customer_review <- gsub("[[:digit:]]", "", dt$r.customer_review)
+
+
+
+custom_stop_words <-tribble(
+  ~word, ~lexicon,
+  "âœ… ", "CUSTOM",
+  "Not Verified", "CUSTOM",
+  "âœ… verified","CUSTOM",
+  "âœ… trip verified ", "CUSTOM",
+  "Verified","CUSTOM",
+  "trip verified","CUSTOM",
+  "verified review", "CUSTOM",
+  "flight","CUSTOM",
+  "airlines","CUSTOM",
+  "airline", "CUSTOM",
+  "review", "CUSTOM",
+  "verified","CUSTOM",
+  "âœ","CUSTOM",
+  "flights","CUSTOM"
+  
+)
+
+stop_words2 <- stop_words %>%
+  bind_rows(custom_stop_words)
+
+tidy_review <- dt %>% 
+  unnest_tokens(word,r.customer_review) %>%
+  anti_join(stop_words2)
+
+tidy_review %>% 
+  count(word) %>% 
+  arrange(desc(n))
+
+
+
+
+
+
+```
+```{r word_count}
+word_counts <- tidy_review %>%
+  count(word) %>%
+  filter(n>2500) %>%
+  mutate(word2 = fct_reorder(word, n)) %>%  arrange(desc(n))
+
+word_counts
+
+# now this plot
+# with new ordered column x = word2
+# is arranged by word count
+ggplot(word_counts[1:40,], aes(x=word2, y=n)) + 
+  geom_col() +
+  coord_flip() +
+  ggtitle("Review Word Counts")
+```
+
+
+```{r}
+word_airline_count <- tidy_review %>%
+  count(word,r.airline) %>% 
+  group_by(r.airline) %>% 
+  top_n(20,n) %>% 
+  ungroup() %>%
+  mutate(word2 = fct_reorder(word, n)) %>% 
+  arrange(desc(n))
+
+word_airline_count[1:40,]
+
+
+ggplot(word_airline_count[1:40,], aes(x=word2, y=n, fill=r.airline)) + 
+  geom_col(show.legend=FALSE) +
+  facet_wrap(~r.airline, scales="free_y") +
+  coord_flip() +
+  ggtitle("Review Word Counts")
+
+```
+
+
+
+```{r sentiment_review}
+sentiment_review <-tidy_review %>%
+  inner_join(get_sentiments("loughran")) %>% 
+  count(sentiment)
+
+sentiment_review
+```
+
+```{r}
+sentimental_score <-tidy_review %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(r.overall, sentiment) %>%
+  spread(sentiment, n) %>% 
+  mutate(overall_sentiment = positive - negative,
+         Stars = fct_reorder(as.factor(r.overall), overall_sentiment))
+
+
+ggplot(
+  sentimental_score, aes(x=Stars, y=overall_sentiment, fill=as.factor(Stars))
+) + 
+  geom_col(show.legend=FALSE) +
+  coord_flip() +
+  labs(
+    title = "Overall Sentiment by Stars",
+    subtitle = "Reviews for Flight",
+    x = "Stars",
+    y = "Overall Sentiment"
+  )
+```
+

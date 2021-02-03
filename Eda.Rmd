@@ -30,13 +30,8 @@ You can also embed plots, for example:
 
 ```{r  NA, echo=FALSE}
 #Cleaning NAs
-r<- review %>% na.omit()
-
-#Check if there is left
-row.has.na <- apply(r, 1, function(x){any(is.na(x))})
-
-sum(row.has.na)
-
+#Cleaning NAs
+r<- review[complete.cases(review$airline),]
 
 ```
 
@@ -75,14 +70,14 @@ Apperantly Cathay Pacific and British Airlines passengers are writing the most a
 
 
 ```{r Overall scoring}
-overall_mean <- r_score %>%  
+overall_mean <- r_score %>%  drop_na() %>% 
   group_by(airline) %>% 
   summarise(Overall_Mean=mean(overall)) %>% 
   arrange(desc(Overall_Mean)) %>% head(20)
 
 
-ggplot(overall_mean,aes(x=reorder(airline,-(Overall_Mean)),y=Overall_Mean))+
-  geom_bar(width=.5,stat = "identity")+
+ggplot(overall_mean,aes(x=reorder(airline,-(Overall_Mean)),y=Overall_Mean),na.rm = TRUE)+
+  geom_bar(width=.5,stat = "identity",na.rm = TRUE)+
   coord_flip()
 
 to_do scale_y duzelt
@@ -97,7 +92,8 @@ Out of all airlines Aegean Airlines from Greece gets the highest points from pas
 
 
 ```{r Cabin Scoring}
-cabin <- r_score %>%  group_by(airline) %>% 
+cabin <- r_score %>%  drop_na() %>% 
+  group_by(airline) %>% 
   transmute(Overall_cabin= seat_comfort + cabin_service + food_bev + entertainment)%>%
   summarise(Overall_cabin_mean = mean(Overall_cabin)) %>%
   arrange(desc(Overall_cabin_mean)) %>%  head(20)
@@ -112,7 +108,7 @@ scale y duzenle
 
 ```{r Value for Money}
 
-value_money <- r_score %>%  
+value_money <- r_score %>% drop_na() %>%  
   group_by(airline) %>% 
   summarise(value_of_money=mean(value_for_money)) %>% 
   arrange(desc(value_of_money)) %>% head(20)
