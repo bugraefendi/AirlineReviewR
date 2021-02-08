@@ -32,6 +32,11 @@ You can also embed plots, for example:
 #Cleaning NAs
 #Cleaning NAs
 r<- review[complete.cases(review$airline),]
+na_count <-sapply(r, function(y) sum(length(which(is.na(y)))))
+
+
+na_count <- data.frame(na_count)
+
 
 ```
 
@@ -53,17 +58,20 @@ r_score <- r %>%
   select(airline,overall,seat_comfort,cabin_service,food_bev,entertainment,ground_service,value_for_money)
 
 head(r_score)
+table(r_score$overall)
 ```
 
 
 ```{r Most Reviewed}
-numberof_reviews_airline <- r_score %>%  group_by(airline) %>% count(airline) %>% dplyr::arrange(desc(n)) 
+numberof_reviews_airline <- r_score %>%  group_by(airline) %>% count() %>% dplyr::arrange(desc(n)) 
   ggplot(numberof_reviews_airline[1:20,],aes(x=reorder(airline,-n), y=n)) + 
     geom_bar(stat = "identity") +
     coord_flip()+
     ggtitle("Top 20 Most Reviewed Airlines")+
     theme_fivethirtyeight()
 ```
+
+UPDATE
 
 Apperantly Cathay Pacific and British Airlines passengers are writing the most about the flight.
 
@@ -73,14 +81,14 @@ Apperantly Cathay Pacific and British Airlines passengers are writing the most a
 overall_mean <- r_score %>%  drop_na() %>% 
   group_by(airline) %>% 
   summarise(Overall_Mean=mean(overall)) %>% 
-  arrange(desc(Overall_Mean)) %>% head(20)
+  arrange(desc(Overall_Mean)) %>% head(30)
 
 
 ggplot(overall_mean,aes(x=reorder(airline,-(Overall_Mean)),y=Overall_Mean),na.rm = TRUE)+
   geom_bar(width=.5,stat = "identity",na.rm = TRUE)+
   coord_flip()
 
-to_do scale_y duzelt
+#to_do scale_y duzelt
 
 
 ```
@@ -102,7 +110,7 @@ ggplot(cabin,aes(x=reorder(airline,-(Overall_cabin_mean)),y=Overall_cabin_mean))
   geom_bar(width=.5,stat = "identity")+
   coord_flip()
 
-scale y duzenle
+#scale y duzenle
 
 ```
 
@@ -119,7 +127,7 @@ ggplot(value_money,aes(x=reorder(airline,-(value_of_money)),y=value_of_money))+
   coord_flip()
   
 
-to_do value ve over all ayni grafikte nasil gosteririm
+#to_do value ve over all ayni grafikte nasil gosteririm
 
 
 ```
